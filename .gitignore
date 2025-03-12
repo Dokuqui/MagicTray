@@ -93,6 +93,9 @@ Makefile
 *.dylib
 *.dll
 *.lib
+build/
+vcpkg/
+vcpkg_installed/
 
 # Ignore Visual Studio C++ files
 *.vcxproj.filters
