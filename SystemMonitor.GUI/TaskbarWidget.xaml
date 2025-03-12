@@ -1,0 +1,51 @@
+<Window x:Class="SystemMonitor.GUI.TaskbarWidget"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" 
+        AllowsTransparency="True"
+        Background="Transparent" 
+        ShowInTaskbar="False"
+        Topmost="True" 
+        Width="120" 
+        Height="40">
+
+    <Border CornerRadius="8" 
+            Background="#202020" 
+            Opacity="0.95"
+            Padding="8 0">
+
+        <Grid>
+            <StackPanel Orientation="Horizontal" 
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center">
+
+                <TextBlock Text="{Binding CpuUsage}" 
+                   Foreground="{Binding CpuColor}"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <Border.Triggers>
+            <EventTrigger RoutedEvent="MouseEnter">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation To="1.0" 
+                                         Duration="0:0:0.2" 
+                                         Storyboard.TargetProperty="Opacity"/>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+            <EventTrigger RoutedEvent="MouseLeave">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation To="0.95" 
+                                         Duration="0:0:0.5" 
+                                         Storyboard.TargetProperty="Opacity"/>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Border.Triggers>
+    </Border>
+</Window>

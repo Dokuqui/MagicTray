@@ -1,0 +1,170 @@
+# =========================
+# C# / .NET Specific
+# =========================
+# Ignore Visual Studio files
+*.suo
+*.user
+*.userprefs
+*.vspscc
+*.vssscc
+*.aps
+*.sdf
+*.opensdf
+*.sln.docstates
+*.csproj.user
+*.csproj.*.user
+
+# Ignore build outputs
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.ilk
+*.log
+*.lib
+*.sbr
+*.tlb
+*.tlh
+*.tmp
+*.vspx
+*.vsp
+*.psess
+*.ncb
+*.scc
+
+# NuGet packages
+packages/
+*.nupkg
+!*.csproj.nuget.g.props
+!*.csproj.nuget.g.targets
+
+# .NET Core
+project.lock.json
+*.env
+*.pidb
+*.seed
+*.vsp
+*.vspx
+*.dbmdl
+*.jfm
+*.sln.ide
+*.xap
+*.tmp_proj
+*.userprefs
+
+# =========================
+# C++ Specific
+# =========================
+# Ignore build outputs
+*.obj
+*.o
+*.a
+*.so
+*.dll
+*.lib
+*.exp
+*.pdb
+*.idb
+*.ilk
+*.manifest
+*.res
+*.pch
+*.ncb
+*.sdf
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.log
+*.tlog
+*.ipch
+
+# Ignore CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.dir/
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
+
+# Ignore Visual Studio C++ files
+*.vcxproj.filters
+*.vcxproj.user
+*.vcproj.*
+*.sdf
+*.opensdf
+*.sln.ide
+
+# =========================
+# Common IDEs
+# =========================
+# Visual Studio
+.vs/
+.vscode/
+*.code-workspace
+*.suo
+*.userosscache
+*.sln.docstates
+
+# JetBrains (Rider/CLion)
+.idea/
+*.iml
+*.ipr
+*.iws
+*.remotes
+*.dll
+*.pdb
+*.cache
+
+# =========================
+# OS Specific
+# =========================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+*.dmg
+*.localized
+
+# Linux
+*.swp
+*~
+
+# =========================
+# General
+# =========================
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*~
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+*.mdb
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Dependency directories
+node_modules/
+bower_components/
+HardwareMonitor.Core/Hardware.bde28a30/x64/Debug/HardwareMonitor.Core.dll.recipe
