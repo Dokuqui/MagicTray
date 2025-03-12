@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Forms;
+using Forms = System.Windows.Forms;
 using System.ComponentModel;
 
 namespace SystemMonitor.GUI
@@ -15,9 +15,13 @@ namespace SystemMonitor.GUI
         [DllImport("user32.dll")]
         private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
+        [StructLayout(LayoutKind.Sequential)]
         private struct RECT
         {
-            public int Left; public int Top; public int Right; public int Bottom;
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
         }
 
         public static readonly DependencyProperty CpuUsageProperty =
@@ -33,6 +37,58 @@ namespace SystemMonitor.GUI
                 typeof(System.Windows.Media.Brush),
                 typeof(TaskbarWidget),
                 new PropertyMetadata(System.Windows.Media.Brushes.LimeGreen));
+
+        public static readonly DependencyProperty Gpu1UsageProperty =
+            DependencyProperty.Register(
+                nameof(Gpu1Usage),
+                typeof(string),
+                typeof(TaskbarWidget),
+                new PropertyMetadata("0%"));
+
+        public static readonly DependencyProperty Gpu1ColorProperty =
+            DependencyProperty.Register(
+                nameof(Gpu1Color),
+                typeof(System.Windows.Media.Brush),
+                typeof(TaskbarWidget),
+                new PropertyMetadata(System.Windows.Media.Brushes.LimeGreen));
+
+        public static readonly DependencyProperty Gpu2UsageProperty =
+            DependencyProperty.Register(
+                nameof(Gpu2Usage),
+                typeof(string),
+                typeof(TaskbarWidget),
+                new PropertyMetadata("0%"));
+
+        public static readonly DependencyProperty Gpu2ColorProperty =
+            DependencyProperty.Register(
+                nameof(Gpu2Color),
+                typeof(System.Windows.Media.Brush),
+                typeof(TaskbarWidget),
+                new PropertyMetadata(System.Windows.Media.Brushes.LimeGreen));
+
+        public string Gpu1Usage
+        {
+            get => (string)GetValue(Gpu1UsageProperty);
+            set => SetValue(Gpu1UsageProperty, value);
+        }
+
+        public System.Windows.Media.Brush Gpu1Color
+        {
+            get => (System.Windows.Media.Brush)GetValue(Gpu1ColorProperty);
+            set => SetValue(Gpu1ColorProperty, value);
+        }
+
+        public string Gpu2Usage
+        {
+            get => (string)GetValue(Gpu2UsageProperty);
+            set => SetValue(Gpu2UsageProperty, value);
+        }
+
+        public System.Windows.Media.Brush Gpu2Color
+        {
+            get => (System.Windows.Media.Brush)GetValue(Gpu2ColorProperty);
+            set => SetValue(Gpu2ColorProperty, value);
+        }
 
         public string CpuUsage
         {
@@ -51,34 +107,36 @@ namespace SystemMonitor.GUI
             InitializeComponent();
             DataContext = this;
 
-            Loaded += (s, e) => PositionWindow();
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object? sender, RoutedEventArgs e)
+        {
+            PositionWindow();
         }
 
         private void PositionWindow()
         {
             var taskbarHandle = FindWindow("Shell_TrayWnd", null);
-            if (!GetWindowRect(taskbarHandle, out RECT rect)) return;
+            if (taskbarHandle == IntPtr.Zero) return;
 
-            var dpi = VisualTreeHelper.GetDpi(this);
-            double scaling = dpi.DpiScaleX;
+            if (!GetWindowRect(taskbarHandle, out var rect)) return;
 
-            // Get taskbar position
+            var screenWidth = SystemParameters.PrimaryScreenWidth;
+            var screenHeight = SystemParameters.PrimaryScreenHeight;
+
             if (rect.Bottom - rect.Top > rect.Right - rect.Left)
             {
-                // Vertical taskbar (left or right)
-                // Position the widget away from the taskbar to avoid system tray area
-                Left = (rect.Left / scaling) + 10;  // Add margin from taskbar's left edge
-                Top = (rect.Top / scaling) + 10;  // Place it slightly above the taskbar
+                // Vertical taskbar
+                Left = rect.Left + 12;
+                Top = rect.Top + 12;
             }
             else
             {
-                // Horizontal taskbar (bottom or top)
-                // Place the widget more towards the left side to avoid the system tray area
-                Left = SystemParameters.WorkArea.Right - ActualWidth - 60;  // Move further left
-                Top = SystemParameters.WorkArea.Bottom - ActualHeight - 10;  // Slightly above the taskbar
+                // Horizontal taskbar
+                Left = screenWidth - ActualWidth - 12;
+                Top = screenHeight - ActualHeight - 12;
             }
         }
-
-
     }
 }

@@ -1,0 +1,6 @@
+LIBRARY HardwareMonitor.Core
+EXPORTS
+    GetCpuUsage
+    GetGpuCount
+    GetGpuUsage
+    GetGpuTemperature

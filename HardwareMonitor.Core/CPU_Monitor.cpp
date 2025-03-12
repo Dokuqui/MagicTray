@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "CPU_Monitor.h"
 #include <windows.h>
 #include <pdh.h>
 
