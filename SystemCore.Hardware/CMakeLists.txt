@@ -11,12 +11,12 @@ project ("SystemCore.Hardware")
 include_directories("C:/Dev/Include")
 
 # Add library directories for DirectX SDK
-link_directories("C:/Dev/Lib/x86")
+link_directories("C:/Dev/Lib/x64")
 
-add_executable (SystemCore.Hardware  "SystemCore.Hardware.h" "src/main.cpp" "src/system_monitor.cpp" "src/overlay.cpp" "src/optimizer.cpp" "src/network.cpp" "include/system_monitor.h")
+add_executable (SystemCore.Hardware "src/main.cpp" "src/system_monitor.cpp" "src/overlay.cpp" "src/optimizer.cpp" "src/network.cpp" "include/system_monitor.h")
 
 # Link DirectX libraries
-target_link_libraries(SystemCore.Hardware d3d9 d3d11 dxgi wbemuuid)
+target_link_libraries(SystemCore.Hardware d3d9 d3d11 dxgi wbemuuid d3d12)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET SystemCore.Hardware PROPERTY CXX_STANDARD 20)
