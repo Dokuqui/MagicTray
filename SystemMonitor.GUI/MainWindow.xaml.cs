@@ -39,8 +39,20 @@ namespace SystemMonitor.GUI
             _graphLine = new Polyline
             {
                 StrokeThickness = 2,
-                Points = new PointCollection()
+                Stroke = System.Windows.Media.Brushes.LimeGreen,
+                StrokeDashCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round
             };
+
+            var gradient = new LinearGradientBrush(
+                Colors.LimeGreen,
+                Colors.Transparent,
+                new System.Windows.Point(0.5, 1),
+                new System.Windows.Point(0.5, 0));
+
+            _graphLine.Stroke = gradient;
             CpuGraphCanvas.Children.Add(_graphLine);
         }
 
@@ -48,14 +60,11 @@ namespace SystemMonitor.GUI
         {
             if (_graphLine == null) return;
 
-            // Create a copy of the current history to avoid modification during enumeration
             var historySnapshot = new Queue<float>(_cpuHistory);
 
-            // Recreate graph
             CpuGraphCanvas.Children.Clear();
             InitializeGraph();
 
-            // Redraw using the snapshot instead of modifying the original collection
             foreach (var usage in historySnapshot)
             {
                 Dispatcher.Invoke(() => UpdateGraph(usage));
