@@ -9,11 +9,28 @@
 #include <comdef.h>
 #include <wbemidl.h>
 
+// AMD and NVIDIA SDKs
+#include "../include/adl_sdk.h"
+#include "../include/nvapi.h"
+
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "pdh.lib")
 #pragma comment(lib, "wbemuuid.lib")
+// ========================= INIT ========================= //
+// Global ADL context (initialize once)
+int ADL_init() {
+	if (ADL_Main_Control_Create(ADL_Main_Memory_Alloc, 1) != ADL_OK)
+		return -1;
+	return 0;
+}
 
+// Call this before using ADL functions
+static bool nvapiInitialized = []() {
+	return NvAPI_Initialize() == NVAPI_OK;
+	}();
+
+// ========================= CPU USAGE ========================= //
 double calculate_cpu_usage() {
 	static ULARGE_INTEGER prevIdleTime, prevKernelTime, prevUserTime;
 	ULARGE_INTEGER idleTime, kernelTime, userTime;
@@ -52,6 +69,7 @@ double get_cpu_usage() {
 	return calculate_cpu_usage();
 }
 
+// ========================= RAM USAGE ========================= //
 double get_ram_usage() {
 	MEMORYSTATUSEX memInfo;
 	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
@@ -63,113 +81,57 @@ double get_ram_usage() {
 	return usedRam;
 }
 
-double getVRAMUsage(IDXGIAdapter1* adapter) {
+// ========================= GPU USAGE (DXGI) ========================= //
+double getGPUUsageDXGI(IDXGIAdapter1* adapter) {
 	IDXGIAdapter3* adapter3 = nullptr;
-	DXGI_QUERY_VIDEO_MEMORY_INFO vramInfo = {};
-	double usedVRAM = -1.0;
+	DXGI_QUERY_VIDEO_MEMORY_INFO memoryInfo = {};
+	double usage = 0.0;
 
 	if (SUCCEEDED(adapter->QueryInterface(IID_PPV_ARGS(&adapter3)))) {
-		if (SUCCEEDED(adapter3->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &vramInfo))) {
-			usedVRAM = static_cast<double>(vramInfo.CurrentUsage) / (1024.0 * 1024 * 1024);
+		if (SUCCEEDED(adapter3->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &memoryInfo))) {
+			usage = static_cast<double>(memoryInfo.CurrentUsage) / memoryInfo.Budget * 100.0;
 		}
 		adapter3->Release();
 	}
 
-	return usedVRAM > 0 ? usedVRAM : 0.0;  // Ensure no negative values
+	return usage >= 0 ? usage : 0.0;
 }
 
-double getGPUUsage(const std::wstring& gpuName) {
-	IWbemLocator* pLocator = nullptr;
-	IWbemServices* pServices = nullptr;
-	IEnumWbemClassObject* pEnumerator = nullptr;
-	HRESULT hres;
-
-	CoInitializeEx(0, COINIT_MULTITHREADED);
-	hres = CoCreateInstance(CLSID_WbemLocator, nullptr, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLocator);
-	if (FAILED(hres)) return -1.0;
-
-	hres = pLocator->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), nullptr, nullptr, 0, NULL, 0, 0, &pServices);
-	if (FAILED(hres)) {
-		pLocator->Release();
-		return -1.0;
+// ========================= VRAM USAGE ========================= //
+SIZE_T getProcessVRAMUsage() {
+	HANDLE hProcess = GetCurrentProcess();
+	PROCESS_MEMORY_COUNTERS_EX pmc;
+	if (GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
+		return pmc.PrivateUsage / (1024 * 1024);  // Convert to MB
 	}
+	return 0;
+}
 
-	hres = pServices->ExecQuery(bstr_t("WQL"),
-		bstr_t("SELECT Name, PercentGPUUsage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUAdapter"),
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, nullptr, &pEnumerator);
-
-	if (FAILED(hres)) {
-		pServices->Release();
-		pLocator->Release();
-		return -1.0;
+// ========================= GPU TEMPERATURE ========================= //
+double getGPUTemperature_ADL(int adapterIndex) {
+	ADLTemperature adlTemp = { sizeof(ADLTemperature) };
+	if (ADL_Overdrive5_Temperature_Get(adapterIndex, 0, &adlTemp) == ADL_OK) {
+		return adlTemp.iTemperature / 1000.0;
 	}
+	return -1.0;
+}
 
-	IWbemClassObject* pClassObject = nullptr;
-	ULONG uReturn = 0;
-	double gpuUsage = -1.0;
+double getGPUTemperature_NVAPI() {
+	NvPhysicalGpuHandle handles[NVAPI_MAX_PHYSICAL_GPUS];
+	NvU32 gpuCount = 0;
 
-	while (pEnumerator) {
-		HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pClassObject, &uReturn);
-		if (0 == uReturn) break;
+	if (NvAPI_EnumPhysicalGPUs(handles, &gpuCount) == NVAPI_OK && gpuCount > 0) {
+		NV_GPU_THERMAL_SETTINGS thermalSettings = {};
+		thermalSettings.version = NV_GPU_THERMAL_SETTINGS_VER;
 
-		VARIANT vtName, vtUsage;
-		pClassObject->Get(L"Name", 0, &vtName, 0, 0);
-		std::wstring name = vtName.bstrVal;
-
-		if (name.find(gpuName) != std::wstring::npos) {
-			pClassObject->Get(L"PercentGPUUsage", 0, &vtUsage, 0, 0);
-			gpuUsage = vtUsage.uintVal;
-			VariantClear(&vtUsage);
+		if (NvAPI_GPU_GetThermalSettings(handles[0], NVAPI_THERMAL_TARGET_GPU, &thermalSettings) == NVAPI_OK) {
+			return static_cast<double>(thermalSettings.sensor[0].currentTemp);
 		}
-
-		VariantClear(&vtName);
-		pClassObject->Release();
 	}
-
-	pEnumerator->Release();
-	pServices->Release();
-	pLocator->Release();
-	CoUninitialize();
-
-	return gpuUsage >= 0 ? gpuUsage : 0.0;
+	return -1.0;
 }
 
-double getGPUTemperature() {
-	IWbemLocator* pLoc = nullptr;
-	IWbemServices* pSvc = nullptr;
-	IEnumWbemClassObject* pEnumerator = nullptr;
-	HRESULT hres;
-
-	hres = CoInitializeEx(0, COINIT_MULTITHREADED);
-	if (FAILED(hres)) return -1.0;
-
-	hres = CoCreateInstance(CLSID_WbemLocator, nullptr, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pLoc);
-	if (FAILED(hres)) return -1.0;
-
-	hres = pLoc->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), nullptr, nullptr, 0, NULL, 0, 0, &pSvc);
-	if (FAILED(hres)) return -1.0;
-
-	hres = pSvc->ExecQuery(bstr_t("WQL"), bstr_t("SELECT CurrentTemperature FROM Win32_TemperatureProbe"),
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, nullptr, &pEnumerator);
-	if (FAILED(hres)) return -1.0;
-
-	IWbemClassObject* pclsObj = nullptr;
-	ULONG uReturn = 0;
-	double temperature = -1.0;
-
-	while (pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn) == S_OK) {
-		VARIANT vtProp;
-		pclsObj->Get(L"CurrentTemperature", 0, &vtProp, 0, 0);
-		if (vtProp.vt == VT_I4) {
-			temperature = (vtProp.intVal - 2732) / 10.0;
-		}
-		VariantClear(&vtProp);
-		pclsObj->Release();
-	}
-
-	return temperature > 0 ? temperature : -1.0;
-}
-
+// ========================= GPU INFO ========================= //
 std::vector<GPUInfo> getGPUInfo() {
 	std::vector<GPUInfo> gpus;
 	IDXGIFactory4* dxgiFactory = nullptr;
@@ -196,9 +158,18 @@ std::vector<GPUInfo> getGPUInfo() {
 		GPUInfo gpu;
 		gpu.name = gpuName;
 		gpu.totalVRAM = static_cast<double>(adapterDesc.DedicatedVideoMemory) / (1024.0 * 1024 * 1024);
-		gpu.usedVRAM = getVRAMUsage(dxgiAdapter);
-		gpu.gpuUsage = getGPUUsage(gpuName);
-		gpu.temperature = getGPUTemperature();
+		gpu.usedVRAM = getProcessVRAMUsage();
+		gpu.gpuUsage = getGPUUsageDXGI(dxgiAdapter);
+
+		if (gpuName.find(L"NVIDIA") != std::wstring::npos) {
+			gpu.temperature = getGPUTemperature_NVAPI();
+		}
+		else if (gpuName.find(L"AMD") != std::wstring::npos) {
+			gpu.temperature = getGPUTemperature_ADL(adapterIndex);
+		}
+		else {
+			gpu.temperature = -1.0;
+		}
 
 		gpus.push_back(gpu);
 		dxgiAdapter->Release();
