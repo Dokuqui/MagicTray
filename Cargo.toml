@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0"
 sysinfo = "0.33.1"
+nvml-wrapper = "0.10"
+libloading = "0.8"

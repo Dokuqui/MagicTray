@@ -3,7 +3,7 @@ use sysinfo::{RefreshKind, System, MemoryRefreshKind};
 
 pub fn get_ram_usage() -> Result<f64> {
     let mut sys = System::new_with_specifics(
-        RefreshKind::everything().with_memory(MemoryRefreshKind::default()),
+        RefreshKind::everything().with_memory(MemoryRefreshKind::everything()),
     );
 
     sys.refresh_memory();
